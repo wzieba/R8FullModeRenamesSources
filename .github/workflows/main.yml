@@ -1,0 +1,23 @@
+name: Build
+
+on: [ push ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - run: brew install apktool diff-so-fancy
+      - run: ./gradlew assembleRelease
+      - run: apktool decode app/build/outputs/apk/release/app-release-unsigned.apk --output r8full
+      - name: Disable R8 full mode
+        run: cp -f gradle.properties-full-mode-disabled gradle.properties
+      - run: ./gradlew assembleRelease
+      - run: apktool decode app/build/outputs/apk/release/app-release-unsigned.apk --output r8notfull
+      - name: Compare
+        run: diff -u -r r8notfull/smali/io/wzieba/r8fullmoderenamessources r8full/smali/io/wzieba/r8fullmoderenamessources | diff-so-fancy
